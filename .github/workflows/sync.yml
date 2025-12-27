@@ -57,20 +57,21 @@ jobs:
         git config user.name "GitHub Actions"
         git config user.email "github-actions[bot]@users.noreply.github.com"
 
-        # 确保 upstream 永远能正常添加
         git remote remove upstream 2>/dev/null || true
         git remote add upstream https://github.com/QiuSimons/luci-app-daed.git
 
-        # 获取 tag 对应的 commit
         git fetch upstream tag $TAG
 
-        # 切换到 ttaagg
         git checkout ttaagg
 
-        # 重置到 tag 对应的 commit
         git reset --hard $TAG
-        ls -a
+
+        # 删除上游 workflow
         rm -rf .github
-        ls -a
-        # 推送
+
+        # 🔥🔥🔥 必须 commit，否则 push 时 workflow 仍然存在
+        git add -A
+        git commit -m "Remove upstream workflows" || echo "No changes"
+
         git push origin ttaagg --force
+
