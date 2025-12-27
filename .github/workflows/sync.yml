@@ -2,7 +2,7 @@ name: Sync Upstream Simple
 
 on:
   schedule:
-    - cron: '0 */6 * * *'  # 每6小时同步一次
+    - cron: '0 0 * * *'
   workflow_dispatch:
 
 jobs:
@@ -25,9 +25,6 @@ jobs:
         base: master
         merge_method: hardreset
         
-    ############################################################
-    # 2. 获取父仓库最新 tag
-    ############################################################
     - name: Get latest tag
       id: get-tag
       uses: actions/github-script@v6
@@ -47,9 +44,6 @@ jobs:
           return tags[0].name;
         result-encoding: string
 
-    ############################################################
-    # 3. ttaagg 分支：恢复到最新 tag 对应的 commit
-    ############################################################
     - name: Reset ttaagg to latest tag
       env:
         TAG: ${{ steps.get-tag.outputs.result }}
@@ -57,32 +51,28 @@ jobs:
         git config user.name "GitHub Actions"
         git config user.email "github-actions[bot]@users.noreply.github.com"
 
-        # 确保 upstream 永远能正常添加
         git remote remove upstream 2>/dev/null || true
         git remote add upstream https://github.com/QiuSimons/luci-app-daed.git
 
-        # 获取 tag 对应的 commit
         git fetch upstream tag $TAG
-
-        # 切换到 ttaagg
         git checkout ttaagg
 
-        # 备份你的 Makefile（如果存在）
         cp daed/Makefile /tmp/backup.mk || true
-
-        # 重置到 tag 对应的 commit
         git reset --hard $TAG
-
-        # 删除上游 workflow（避免 push 被 GitHub 拒绝）
+        
+        # 从上游Makefile中提取PKG_VERSION的值
+        UPSTREAM_VERSION=$(grep -E '^PKG_VERSION\s*[:+]?=\s*' daed/Makefile | head -1 | sed -E 's/^PKG_VERSION\s*[:+]?=\s*//' | tr -d '\r')
+        echo "从上游Makefile读取PKG_VERSION: $UPSTREAM_VERSION"
+        
+        # 更新备份Makefile中的PKG_VERSION
+        sed -i "s/^PKG_VERSION[[:space:]]*[:+]*=.*/PKG_VERSION:=$UPSTREAM_VERSION/" /tmp/backup.mk
+        echo "已将备份Makefile的PKG_VERSION更新为: $UPSTREAM_VERSION"
+        
         rm -rf .github
-
-        # 恢复你的 Makefile
         cp /tmp/backup.mk daed/Makefile || true
 
-        # 提交删除 workflow + 恢复 Makefile
         git add -A
         git commit -m "Sync ttaagg to upstream tag $TAG and restore Makefile" || echo "No changes"
 
-        # 推送
         git push origin ttaagg --force
 
