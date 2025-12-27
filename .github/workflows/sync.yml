@@ -25,46 +25,10 @@ jobs:
         base: master
         merge_method: hardreset
         
-    - name: Get latest tag
-      id: get-tag
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const semver = require('semver');
-
-          const { data: tags } = await github.rest.repos.listTags({
-            owner: 'QiuSimons',
-            repo: 'luci-app-daed',
-            per_page: 100
-          });
-
-          if (!tags.length) {
-            core.setFailed("No tags found in upstream repo");
-            return;
-          }
-
-          console.log("获取到的所有 tags:");
-          tags.forEach(t => {
-            console.log(`Tag: ${t.name}, Commit: ${t.commit.sha}`);
-          });
-
-          // 按 semver 排序，取最新的
-          const validTags = tags.map(t => t.name).filter(n => semver.valid(n));
-          if (!validTags.length) {
-            core.setFailed("No valid semver tags found");
-            return;
-          }
-
-          const latest = validTags.sort(semver.rcompare)[0];
-          console.log(`选取的最新 tag: ${latest}`);
-
-          return latest;
-        result-encoding: string
-
-
     - name: Reset ttaagg to latest tag
       env:
-        TAG: ${{ steps.get-tag.outputs.result }}
+        TAG: ${{ steps.get-tag.outputs.tag }}
+        COMMIT_SHA: ${{ steps.get-tag.outputs.commit_sha }}
       run: |
         git config user.name "GitHub Actions"
         git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -76,7 +40,7 @@ jobs:
         git checkout ttaagg
 
         cp daed/Makefile /tmp/backup.mk || true
-        git reset --hard $TAG
+        git reset --hard $COMMIT_SHA
         
         # 从上游Makefile中提取PKG_VERSION的值
         UPSTREAM_VERSION=$(grep -E '^PKG_VERSION\s*[:+]?=\s*' daed/Makefile | head -1 | sed -E 's/^PKG_VERSION\s*[:+]?=\s*//' | tr -d '\r')
