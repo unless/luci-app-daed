@@ -25,6 +25,25 @@ jobs:
         base: master
         merge_method: hardreset
         
+    - name: Get latest tag and commit
+      id: get-tag
+      run: |
+        OWNER="QiuSimons"
+        REPO="luci-app-daed"
+
+        # 获取最新 release 的 tag 名称
+        TAG=$(curl -s "https://api.github.com/repos/$OWNER/$REPO/releases/latest" | jq -r '.tag_name')
+
+        # 根据 tag 获取 commit SHA
+        COMMIT_SHA=$(curl -s "https://api.github.com/repos/$OWNER/$REPO/git/ref/tags/$TAG" | jq -r '.object.sha')
+
+        echo "Latest tag: $TAG"
+        echo "Latest commit SHA: $COMMIT_SHA"
+
+        # 设置输出，供后续步骤使用
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+        echo "commit_sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
+
     - name: Reset ttaagg to latest tag
       env:
         TAG: ${{ steps.get-tag.outputs.tag }}
@@ -57,4 +76,3 @@ jobs:
         git commit -m "Sync ttaagg to upstream tag $TAG and restore Makefile" || echo "No changes"
 
         git push origin ttaagg --force
-
