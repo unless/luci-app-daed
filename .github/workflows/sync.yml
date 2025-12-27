@@ -16,7 +16,7 @@ jobs:
         fetch-depth: 0
         
     - name: Sync with upstream
-      uses: tgymnich/fork-sync@v1.8
+      uses: tgymnich/fork-sync@v2.0
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         owner: QiuSimons
