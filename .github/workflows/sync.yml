@@ -69,8 +69,8 @@ jobs:
 
         # 重置到 tag 对应的 commit
         git reset --hard $TAG
-        ls
+        ls -a
         rm -rf .github
-        ls
+        ls -a
         # 推送
         git push origin ttaagg --force
