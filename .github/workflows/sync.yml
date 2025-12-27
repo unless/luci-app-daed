@@ -21,6 +21,6 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         owner: QiuSimons
         repo: luci-app-daed
-        head: main
-        base: main
+        head: master
+        base: master
         merge_method: hardreset
