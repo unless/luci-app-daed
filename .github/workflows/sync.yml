@@ -23,7 +23,7 @@ jobs:
         repo: luci-app-daed
         head: master
         base: master
-        merge_method: hardreset
+        merge_method: merge
         
     - name: Get latest tag and commit
       id: get-tag
