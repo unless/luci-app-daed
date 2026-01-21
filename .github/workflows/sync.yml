@@ -2,13 +2,16 @@ name: Sync Upstream Simple
 
 on:
   schedule:
-    - cron: '0 0 * * *'
-  workflow_dispatch:
+    - cron: '0 0 * * *'   # 每天凌晨自动运行
+  workflow_dispatch:       # 手动触发
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     
+    permissions:
+      contents: write      # 必须有写权限才能推送
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -18,7 +21,7 @@ jobs:
     - name: Sync with upstream
       uses: tgymnich/fork-sync@v2.0
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.GITHUB_TOKEN }}
         owner: QiuSimons
         repo: luci-app-daed
         head: master
@@ -34,13 +37,12 @@ jobs:
         # 获取最新 release 的 tag 名称
         TAG=$(curl -s "https://api.github.com/repos/$OWNER/$REPO/releases/latest" | jq -r '.tag_name')
 
-        # 根据 tag 获取 commit SHA
-        COMMIT_SHA=$(curl -s "https://api.github.com/repos/$OWNER/$REPO/git/ref/tags/$TAG" | jq -r '.object.sha')
+        # 根据 tag 获取 commit SHA (注意 refs)
+        COMMIT_SHA=$(curl -s "https://api.github.com/repos/$OWNER/$REPO/git/refs/tags/$TAG" | jq -r '.object.sha')
 
         echo "Latest tag: $TAG"
         echo "Latest commit SHA: $COMMIT_SHA"
 
-        # 设置输出，供后续步骤使用
         echo "tag=$TAG" >> $GITHUB_OUTPUT
         echo "commit_sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
 
@@ -56,12 +58,12 @@ jobs:
         git remote add upstream https://github.com/QiuSimons/luci-app-daed.git
 
         git fetch upstream tag $TAG
-        git checkout ttaagg
+        git checkout -B ttaagg   # 如果不存在就新建
 
         cp daed/Makefile /tmp/backup.mk || true
         git reset --hard $COMMIT_SHA
         
-        # 从上游Makefile中提取PKG_VERSION的值
+        # 从上游Makefile中提取PKG_VERSION
         UPSTREAM_VERSION=$(grep -E '^PKG_VERSION\s*[:+]?=\s*' daed/Makefile | head -1 | sed -E 's/^PKG_VERSION\s*[:+]?=\s*//' | tr -d '\r')
         echo "从上游Makefile读取PKG_VERSION: $UPSTREAM_VERSION"
         
@@ -75,4 +77,4 @@ jobs:
         git add -A
         git commit -m "Sync ttaagg to upstream tag $TAG and restore Makefile" || echo "No changes"
 
-        git push origin ttaagg --force
+        git push origin ttaagg --force-with-lease
