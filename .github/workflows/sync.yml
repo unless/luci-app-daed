@@ -1,82 +1,88 @@
-name: Sync Upstream Simple
+name: Sync Upstream + Tag Branch
 
 on:
   schedule:
     - cron: '0 0 * * *'   # 每天凌晨自动运行
-  workflow_dispatch:       # 手动触发
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   sync:
     runs-on: ubuntu-latest
-    
-    permissions:
-      contents: write
-      pull-requests: write
-
 
     steps:
     - name: Checkout
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        
-    - name: Sync with upstream
-      uses: tgymnich/fork-sync@v2.0
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        owner: QiuSimons
-        repo: luci-app-daed
-        head: master
-        base: master
-        merge_method: merge
-        
+
+    - name: Set Git identity
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+    # ---------------------------------------------------------
+    # 1. 同步 upstream/master 到本地 master
+    # ---------------------------------------------------------
+    - name: Add upstream and fetch
+      run: |
+        git remote remove upstream 2>/dev/null || true
+        git remote add upstream https://github.com/QiuSimons/luci-app-daed.git
+        git fetch upstream
+
+    - name: Merge upstream/master into local master
+      run: |
+        git checkout master
+        git merge --no-edit upstream/master || true
+        git push origin master
+
+    # ---------------------------------------------------------
+    # 2. 获取 upstream 最新 release tag + commit
+    # ---------------------------------------------------------
     - name: Get latest tag and commit
       id: get-tag
       run: |
         OWNER="QiuSimons"
         REPO="luci-app-daed"
 
-        # 获取最新 release 的 tag 名称
         TAG=$(curl -s "https://api.github.com/repos/$OWNER/$REPO/releases/latest" | jq -r '.tag_name')
-
-        # 根据 tag 获取 commit SHA (注意 refs)
         COMMIT_SHA=$(curl -s "https://api.github.com/repos/$OWNER/$REPO/git/refs/tags/$TAG" | jq -r '.object.sha')
-
-        echo "Latest tag: $TAG"
-        echo "Latest commit SHA: $COMMIT_SHA"
 
         echo "tag=$TAG" >> $GITHUB_OUTPUT
         echo "commit_sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
 
+    # ---------------------------------------------------------
+    # 3. 重置 ttaagg 分支到最新 tag，并更新 Makefile
+    # ---------------------------------------------------------
     - name: Reset ttaagg to latest tag
       env:
         TAG: ${{ steps.get-tag.outputs.tag }}
         COMMIT_SHA: ${{ steps.get-tag.outputs.commit_sha }}
       run: |
-        git config user.name "GitHub Actions"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-
-        git remote remove upstream 2>/dev/null || true
-        git remote add upstream https://github.com/QiuSimons/luci-app-daed.git
-
         git fetch upstream tag $TAG
-        git checkout -B ttaagg   # 如果不存在就新建
 
+        # 切换或创建 ttaagg
+        git checkout -B ttaagg
+
+        # 备份本地 Makefile
         cp daed/Makefile /tmp/backup.mk || true
+
+        # 强制 reset 到 tag commit
         git reset --hard $COMMIT_SHA
-        
-        # 从上游Makefile中提取PKG_VERSION
+
+        # 从 upstream Makefile 读取 PKG_VERSION
         UPSTREAM_VERSION=$(grep -E '^PKG_VERSION\s*[:+]?=\s*' daed/Makefile | head -1 | sed -E 's/^PKG_VERSION\s*[:+]?=\s*//' | tr -d '\r')
-        echo "从上游Makefile读取PKG_VERSION: $UPSTREAM_VERSION"
-        
-        # 更新备份Makefile中的PKG_VERSION
+        echo "Upstream PKG_VERSION: $UPSTREAM_VERSION"
+
+        # 写回本地 Makefile
         sed -i "s/^PKG_VERSION[[:space:]]*[:+]*=.*/PKG_VERSION:=$UPSTREAM_VERSION/" /tmp/backup.mk
-        echo "已将备份Makefile的PKG_VERSION更新为: $UPSTREAM_VERSION"
-        
+        cp /tmp/backup.mk daed/Makefile
+
+        # 删除 upstream 的 workflow
         rm -rf .github
-        cp /tmp/backup.mk daed/Makefile || true
 
         git add -A
-        git commit -m "Sync ttaagg to upstream tag $TAG and restore Makefile" || echo "No changes"
-
+        git commit -m "Sync ttaagg to upstream tag $TAG and update Makefile" || echo "No changes"
         git push origin ttaagg --force-with-lease
