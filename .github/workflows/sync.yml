@@ -10,7 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     
     permissions:
-      contents: write      # 必须有写权限才能推送
+      contents: write
+      pull-requests: write
+
 
     steps:
     - name: Checkout
