@@ -85,4 +85,4 @@ jobs:
 
         git add -A
         git commit -m "Sync ttaagg to upstream tag $TAG and update Makefile" || echo "No changes"
-        git push origin ttaagg
+        git push origin ttaagg --force-with-leas
