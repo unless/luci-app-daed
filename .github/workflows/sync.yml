@@ -52,7 +52,7 @@ jobs:
 
         echo "tag=$TAG" >> $GITHUB_OUTPUT
         echo "commit_sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
-
+        cp .github/workflows/backup.mk /tmp/backup.mk
     # ---------------------------------------------------------
     # 3. 重置 ttaagg 分支到最新 tag，并更新 Makefile
     # ---------------------------------------------------------
@@ -67,7 +67,6 @@ jobs:
         git checkout -B ttaagg
         
         # 备份本地 Makefile
-        cp daed/Makefile /tmp/backup.mk || true
         cat /tmp/backup.mk
         
         # 强制 reset 到 tag commit
