@@ -65,7 +65,7 @@ jobs:
         
         # 备份本地 Makefile
         cp daed/Makefile /tmp/backup.mk || true
-        
+        cat /tmp/backup.mk
         # 切换或创建 ttaagg
         git checkout -B ttaagg
 
@@ -79,7 +79,7 @@ jobs:
         # 写回本地 Makefile
         sed -i "s/^PKG_VERSION[[:space:]]*[:+]*=.*/PKG_VERSION:=$UPSTREAM_VERSION/" /tmp/backup.mk
         cp /tmp/backup.mk daed/Makefile
-
+        cat daed/Makefile
         # 删除 upstream 的 workflow
         rm -rf .github
 
