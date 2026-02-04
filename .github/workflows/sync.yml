@@ -62,12 +62,12 @@ jobs:
         COMMIT_SHA: ${{ steps.get-tag.outputs.commit_sha }}
       run: |
         git fetch upstream tag $TAG
-
-        # 切换或创建 ttaagg
-        git checkout -B ttaagg
-
+        
         # 备份本地 Makefile
         cp daed/Makefile /tmp/backup.mk || true
+        
+        # 切换或创建 ttaagg
+        git checkout -B ttaagg
 
         # 强制 reset 到 tag commit
         git reset --hard $COMMIT_SHA
