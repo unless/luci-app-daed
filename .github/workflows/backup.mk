@@ -31,7 +31,7 @@ DAED_ARCH := $(if $(filter x86_64,$(ARCH)),x86_64,$(if $(filter i386,$(TARGET_AR
 # 自动获取最新 release 的 aarch64_generic.ipk 下载链接
 DAED_URL := $(shell \
   curl -s https://api.github.com/repos/QiuSimons/luci-app-daed/releases/latest \
-    | jq -r '.assets[] | select(.name | test("$(DAED_ARCH)\\.ipk$$")) | .browser_download_url' \
+	| jq -r '.assets[] | select(.name | test("$(DAED_ARCH)\\.ipk$$")) | .browser_download_url' \
 )
 
 # v2ray 数据文件下载地址
@@ -39,54 +39,54 @@ GEOIP_URL:=https://github.com/Loyalsoldier/geoip/releases/latest/download/geoip-
 GEOSITE_URL:=https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat
 
 define Build/Prepare
-    mkdir -p $(PKG_BUILD_DIR)
+	mkdir -p $(PKG_BUILD_DIR)
 
-    # 下载 daed ipk
-    wget -L --content-disposition -O $(PKG_BUILD_DIR)/daed.ipk "$(DAED_URL)"
+	# 下载 daed ipk
+	wget -L --content-disposition -O $(PKG_BUILD_DIR)/daed.ipk "$(DAED_URL)"
 
-    # 解包 ipk
-    cd $(PKG_BUILD_DIR) && \
-        tar -xzf daed.ipk && \
-        tar -xzf data.tar.gz
+	# 解包 ipk
+	cd $(PKG_BUILD_DIR) && \
+		tar -xzf daed.ipk && \
+		tar -xzf data.tar.gz
 
-    # 下载 v2ray 数据文件
-    curl -L $(GEOIP_URL) -o $(PKG_BUILD_DIR)/geoip.dat --progress-bar
-    curl -L $(GEOSITE_URL) -o $(PKG_BUILD_DIR)/geosite.dat --progress-bar
+	# 下载 v2ray 数据文件
+	curl -L $(GEOIP_URL) -o $(PKG_BUILD_DIR)/geoip.dat --progress-bar
+	curl -L $(GEOSITE_URL) -o $(PKG_BUILD_DIR)/geosite.dat --progress-bar
 
-    # 校验 sha256
-    [ "$(curl -sL $(GEOIP_URL).sha256sum | awk '{print $1}')" = "$(sha256sum $(PKG_BUILD_DIR)/geoip.dat | awk '{print $1}')" ]
-    [ "$(curl -sL $(GEOSITE_URL).sha256sum | awk '{print $1}')" = "$(sha256sum $(PKG_BUILD_DIR)/geosite.dat | awk '{print $1}')" ]
+	# 校验 sha256
+	[ "$(curl -sL $(GEOIP_URL).sha256sum | awk '{print $1}')" = "$(sha256sum $(PKG_BUILD_DIR)/geoip.dat | awk '{print $1}')" ]
+	[ "$(curl -sL $(GEOSITE_URL).sha256sum | awk '{print $1}')" = "$(sha256sum $(PKG_BUILD_DIR)/geosite.dat | awk '{print $1}')" ]
 endef
 
 define Build/Configure
-    true
+	true
 endef
 
 define Build/Compile
-    true
+	true
 endef
 
 define Package/daed/install
-    # 安装 daed 二进制
-    $(INSTALL_DIR) $(1)/usr/bin
-    $(INSTALL_BIN) $(PKG_BUILD_DIR)/usr/bin/daed $(1)/usr/bin/daed
+	# 安装 daed 二进制
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/usr/bin/daed $(1)/usr/bin/daed
 
-    # 安装配置文件
-    $(INSTALL_DIR) $(1)/etc/config
-    $(INSTALL_CONF) ./files/daed.config $(1)/etc/config/daed
+	# 安装配置文件
+	$(INSTALL_DIR) $(1)/etc/config
+	$(INSTALL_CONF) ./files/daed.config $(1)/etc/config/daed
 
-    # 安装启动脚本
-    $(INSTALL_DIR) $(1)/etc/init.d
-    $(INSTALL_BIN) ./files/daed.init $(1)/etc/init.d/daed
+	# 安装启动脚本
+	$(INSTALL_DIR) $(1)/etc/init.d
+	$(INSTALL_BIN) ./files/daed.init $(1)/etc/init.d/daed
 
-    # 创建数据目录
-    $(INSTALL_DIR) $(1)/etc/daed
-    $(INSTALL_DIR) $(1)/etc/daed/config
+	# 创建数据目录
+	$(INSTALL_DIR) $(1)/etc/daed
+	$(INSTALL_DIR) $(1)/etc/daed/config
 
-    # 安装 v2ray 数据文件
-    $(INSTALL_DIR) $(1)/usr/share/v2ray
-    $(INSTALL_DATA) $(PKG_BUILD_DIR)/geoip.dat $(1)/usr/share/v2ray/geoip.dat
-    $(INSTALL_DATA) $(PKG_BUILD_DIR)/geosite.dat $(1)/usr/share/v2ray/geosite.dat
+	# 安装 v2ray 数据文件
+	$(INSTALL_DIR) $(1)/usr/share/v2ray
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/geoip.dat $(1)/usr/share/v2ray/geoip.dat
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/geosite.dat $(1)/usr/share/v2ray/geosite.dat
 endef
 
 $(eval $(call BuildPackage,daed))
